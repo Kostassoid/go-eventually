@@ -66,7 +66,6 @@ type Event struct {
 type Store interface {
 	Appender
 	Streamer
-	Subscriber
 }
 
 // Appender is an Event Store trait that provides the ability to append
@@ -117,20 +116,4 @@ type Streamer interface {
 	// StreamAll opens a stream of all Event Streams found in the Event Store.
 	// The stream will be ordered based on their Global Sequence Number.
 	StreamAll(context.Context, EventStream, Select) error
-}
-
-// Subscriber is the Event Store trait that deals with opening a long-running
-// subscription channel that receives notifications on newly-committed
-// Events into the provided EventStream.
-//
-// Implementations of this interface should be synchronous, returning from
-// the call only when the subscription connection either fails, or the
-// subscription gets closed through the provided context.Context.
-//
-// Event Stream channel is provided in input as inversion of dependency,
-// in order to allow to callers to choose the desired buffering on the channel,
-// matching the caller concurrency properties.
-type Subscriber interface {
-	SubscribeToType(context.Context, EventStream, string) error
-	SubscribeToAll(context.Context, EventStream) error
 }

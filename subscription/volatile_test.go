@@ -1,106 +1,96 @@
 package subscription_test
 
 import (
-	"context"
-	"errors"
-	"fmt"
-	"sync"
 	"testing"
-
-	"github.com/stretchr/testify/assert"
-
-	"github.com/get-eventually/go-eventually"
-	"github.com/get-eventually/go-eventually/eventstore"
-	"github.com/get-eventually/go-eventually/eventstore/inmemory"
-	"github.com/get-eventually/go-eventually/internal"
-	"github.com/get-eventually/go-eventually/subscription"
 )
 
 func TestVolatile(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	t.Skip("volatile subscriptions are disabled for the time being")
 
-	streamID := eventstore.StreamID{
-		Type: "my-type",
-		Name: "my-instance",
-	}
+	// ctx, cancel := context.WithCancel(context.Background())
+	// defer cancel()
 
-	eventStore := inmemory.NewEventStore()
+	// streamID := eventstore.StreamID{
+	// 	Type: "my-type",
+	// 	Name: "my-instance",
+	// }
 
-	volatileSubscription := subscription.Volatile{
-		SubscriptionName: "test-volatile-subscription",
-		Target:           subscription.TargetStreamType{Type: streamID.Type},
-		EventStore:       eventStore,
-	}
+	// eventStore := inmemory.NewEventStore()
 
-	_, err := eventStore.Append(
-		ctx,
-		streamID,
-		eventstore.VersionCheck(0),
-		eventually.Event{Payload: internal.StringPayload("test-event-should-not-be-received")},
-	)
+	// volatileSubscription := subscription.Volatile{
+	// 	SubscriptionName: "test-volatile-subscription",
+	// 	Target:           subscription.TargetStreamType{Type: streamID.Type},
+	// 	EventStore:       eventStore,
+	// }
 
-	if !assert.NoError(t, err) {
-		return
-	}
+	// _, err := eventStore.Append(
+	// 	ctx,
+	// 	streamID,
+	// 	eventstore.VersionCheck(0),
+	// 	eventually.Event{Payload: internal.StringPayload("test-event-should-not-be-received")},
+	// )
 
-	expectedEvents := []eventstore.Event{
-		{
-			Stream:         streamID,
-			Version:        2,
-			SequenceNumber: 2,
-			Event: eventually.Event{
-				Payload: internal.StringPayload("test-event-should-be-received-0"),
-			},
-		},
-		{
-			Stream:         streamID,
-			Version:        3,
-			SequenceNumber: 3,
-			Event: eventually.Event{
-				Payload: internal.StringPayload("test-event-should-be-received-1"),
-			},
-		},
-		{
-			Stream:         streamID,
-			Version:        4,
-			SequenceNumber: 4,
-			Event: eventually.Event{
-				Payload: internal.StringPayload("test-event-should-be-received-2"),
-			},
-		},
-	}
+	// if !assert.NoError(t, err) {
+	// 	return
+	// }
 
-	wg := new(sync.WaitGroup)
-	wg.Add(1)
+	// expectedEvents := []eventstore.Event{
+	// 	{
+	// 		Stream:         streamID,
+	// 		Version:        2,
+	// 		SequenceNumber: 2,
+	// 		Event: eventually.Event{
+	// 			Payload: internal.StringPayload("test-event-should-be-received-0"),
+	// 		},
+	// 	},
+	// 	{
+	// 		Stream:         streamID,
+	// 		Version:        3,
+	// 		SequenceNumber: 3,
+	// 		Event: eventually.Event{
+	// 			Payload: internal.StringPayload("test-event-should-be-received-1"),
+	// 		},
+	// 	},
+	// 	{
+	// 		Stream:         streamID,
+	// 		Version:        4,
+	// 		SequenceNumber: 4,
+	// 		Event: eventually.Event{
+	// 			Payload: internal.StringPayload("test-event-should-be-received-2"),
+	// 		},
+	// 	},
+	// }
 
-	go func() {
-		defer cancel()
-		wg.Wait()
+	// wg := new(sync.WaitGroup)
+	// wg.Add(1)
 
-		for i := 0; i < 3; i++ {
-			_, err = eventStore.Append(
-				ctx,
-				streamID,
-				eventstore.VersionCheck(i+1),
-				eventually.Event{
-					Payload: internal.StringPayload(fmt.Sprintf("test-event-should-be-received-%d", i)),
-				},
-			)
+	// go func() {
+	// 	defer cancel()
+	// 	wg.Wait()
 
-			if !assert.NoError(t, err) {
-				return
-			}
-		}
-	}()
+	// 	for i := 0; i < 3; i++ {
+	// 		_, err = eventStore.Append(
+	// 			ctx,
+	// 			streamID,
+	// 			eventstore.VersionCheck(i+1),
+	// 			eventually.Event{
+	// 				Payload: internal.StringPayload(fmt.Sprintf("test-event-should-be-received-%d", i)),
+	// 			},
+	// 		)
 
-	events, err := eventstore.StreamToSlice(ctx, func(ctx context.Context, es eventstore.EventStream) error {
-		// This kinda helps with starting the Subscription first,
-		// then wake up the WaitGroup, which will unlock the write goroutine.
-		go func() { wg.Done() }()
-		return volatileSubscription.Start(ctx, es)
-	})
+	// 		if !assert.NoError(t, err) {
+	// 			return
+	// 		}
+	// 	}
+	// }()
 
-	assert.True(t, errors.Is(err, context.Canceled), "err", err)
-	assert.Equal(t, expectedEvents, events)
+	// events, err := eventstore.StreamToSlice(ctx, func(ctx context.Context, es eventstore.EventStream) error {
+	// 	// This kinda helps with starting the Subscription first,
+	// 	// then wake up the WaitGroup, which will unlock the write goroutine.
+	// 	go func() { wg.Done() }()
+	// 	return volatileSubscription.Start(ctx, es)
+	// })
+
+	// assert.True(t, errors.Is(err, context.Canceled), "err", err)
+	// assert.Equal(t, expectedEvents, events)
 }

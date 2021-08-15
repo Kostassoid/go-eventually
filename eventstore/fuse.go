@@ -17,13 +17,3 @@ type FusedAppendStreamer struct {
 	Appender
 	Streamer
 }
-
-// FusedStreamSubscriber is a convenience type to fuse the Streamer and
-// Subscriber interfaces of an Event Store, where you might need to extend
-// the functionality of such interfaces only partially.
-//
-// Check out FusedAppendStreamer for more information.
-type FusedStreamSubscriber struct {
-	Streamer
-	Subscriber
-}

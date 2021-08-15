@@ -2,14 +2,10 @@ package eventstore
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"sync"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
-	"golang.org/x/sync/errgroup"
 
 	"github.com/get-eventually/go-eventually"
 	"github.com/get-eventually/go-eventually/internal"
@@ -225,77 +221,6 @@ func (ss *StoreSuite) TestStream() {
 	assert.Empty(t, streamSecondType)
 	assert.Empty(t, streamFirstInstance)
 	assert.Empty(t, streamSecondInstance)
-}
-
-// TestSubscribe tests all the eventstore.Subscriber functions using the provided
-// Event Store instance.
-func (ss *StoreSuite) TestSubscribe() {
-	t := ss.T()
-
-	// To stop a Subscriber, we need to explicitly cancel the context.
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	// Open subscribers for all interested Event Streams.
-	// Channels are buffered with the same length as the length of the Event Stream,
-	// optional only to avoid deadlocks in the test setting.
-	streamAll := make(chan Event, len(expectedStreamAll))
-	streamFirstInstance := make(chan Event, len(expectedStreamFirstInstance))
-	streamSecondInstance := make(chan Event, len(expectedStreamSecondInstance))
-
-	// Using a WaitGroup to synchronize writes only after all Subscriptions
-	// have been opened.
-	wg := new(sync.WaitGroup)
-	wg.Add(3)
-
-	group, ctx := errgroup.WithContext(ctx)
-
-	group.Go(func() error {
-		wg.Done()
-		return ss.eventStore.SubscribeToAll(ctx, streamAll)
-	})
-
-	group.Go(func() error {
-		wg.Done()
-		return ss.eventStore.SubscribeToType(ctx, streamFirstInstance, firstInstance.Type)
-	})
-
-	group.Go(func() error {
-		wg.Done()
-		return ss.eventStore.SubscribeToType(ctx, streamSecondInstance, secondInstance.Type)
-	})
-
-	wg.Wait()
-
-	group.Go(func() error {
-		defer cancel()
-
-		// NOTE: this is bad, I know, but we need to give time to the database
-		// to send all the notifications to the subscriber.
-		<-time.After(500 * time.Millisecond)
-
-		if err := ss.appendEvents(ctx); err != nil {
-			return err
-		}
-
-		// NOTE: this is also bad, but same reason as above :shrugs:
-		<-time.After(500 * time.Millisecond)
-
-		return nil
-	})
-
-	if err := group.Wait(); !assert.True(t, errors.Is(err, context.Canceled), "err", err) {
-		return
-	}
-
-	// Sink events from the Event Streams into slices for expectations comparison.
-	streamedAll := ss.skipMetadata(ss.sinkToSlice(streamAll))
-	streamedFirstInstance := ss.skipMetadata(ss.sinkToSlice(streamFirstInstance))
-	streamedSecondInstance := ss.skipMetadata(ss.sinkToSlice(streamSecondInstance))
-
-	assert.Equal(t, expectedStreamAll, streamedAll)
-	assert.Equal(t, expectedStreamFirstInstance, streamedFirstInstance)
-	assert.Equal(t, expectedStreamSecondInstance, streamedSecondInstance)
 }
 
 func (ss *StoreSuite) appendEvents(ctx context.Context) error {

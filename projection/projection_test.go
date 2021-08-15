@@ -51,11 +51,13 @@ func TestRunner(t *testing.T) {
 	eventStore := inmemory.NewEventStore()
 
 	// Create a new subscription to listen events from the event store
-	testSubscription := subscription.CatchUp{
+	testSubscription := &subscription.CatchUp{
 		SubscriptionName: "test-subscription",
 		Target:           subscription.TargetStreamAll{},
 		EventStore:       eventStore,
 		Checkpointer:     checkpoint.NopCheckpointer,
+		PullEvery:        10 * time.Millisecond,
+		MaxInterval:      50 * time.Millisecond,
 	}
 
 	// The target applier function triggers a side effect that projects all received
