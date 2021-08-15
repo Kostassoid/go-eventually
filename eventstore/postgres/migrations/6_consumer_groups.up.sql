@@ -17,10 +17,12 @@ CREATE TABLE consumer_group_leases (
 
 -- Create a unique index for the global_sequence_number, since it is not allowed
 -- to have multiple events with the same sequence number.
-CREATE UNIQUE INDEX CONCURRENTLY IF NOT EXISTS ON events (global_sequence_number);
+CREATE UNIQUE INDEX IF NOT EXISTS events_unique_sequence_number
+    ON events (global_sequence_number);
 
 -- This index should help speed up lookups when streaming events by their stream type.
-CREATE INDEX CONCURRENTLY IF NOT EXISTS ON events (stream_type, global_sequence_number);
+CREATE INDEX IF NOT EXISTS events_by_stream_type_sequence_number
+    ON events (stream_type, global_sequence_number);
 
 -- Use this function to get a "lease" as a member of a specific Consumer Group,
 -- to be able to stream messages using stream_by_type() or stream_all()
